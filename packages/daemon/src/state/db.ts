@@ -48,5 +48,31 @@ function applySchema(d: Database.Database) {
     );
 
     CREATE INDEX IF NOT EXISTS idx_run_events_run_id ON run_events(run_id, id);
+
+    CREATE TABLE IF NOT EXISTS tasks (
+      id              TEXT PRIMARY KEY,
+      title           TEXT NOT NULL,
+      body            TEXT NOT NULL DEFAULT '',
+      repo_path       TEXT NOT NULL,
+      status          TEXT NOT NULL DEFAULT 'queued',
+      priority        INTEGER NOT NULL DEFAULT 2,
+      pinned          INTEGER NOT NULL DEFAULT 0,
+      current_run_id  TEXT,
+      created_at      INTEGER NOT NULL,
+      started_at      INTEGER,
+      ended_at        INTEGER
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_tasks_queue
+      ON tasks(status, pinned DESC, priority DESC, created_at ASC);
   `);
+
+  // Forward-compatible migration: add runs.task_id if upgrading from a DB that
+  // predates the tasks model.
+  const runCols = d
+    .prepare<[], { name: string }>(`SELECT name FROM pragma_table_info('runs')`)
+    .all();
+  if (!runCols.some((c) => c.name === "task_id")) {
+    d.exec(`ALTER TABLE runs ADD COLUMN task_id TEXT`);
+  }
 }

@@ -13,6 +13,7 @@ interface RunRow {
   exit_code: number | null;
   git_before_sha: string | null;
   changes_json: string | null;
+  task_id: string | null;
 }
 
 function rowToRun(row: RunRow): AgentRun {
@@ -27,14 +28,15 @@ function rowToRun(row: RunRow): AgentRun {
     exitCode: row.exit_code ?? undefined,
     gitBeforeSha: row.git_before_sha ?? undefined,
     changes: row.changes_json ? (JSON.parse(row.changes_json) as GitChanges) : undefined,
+    taskId: row.task_id ?? undefined,
   };
 }
 
 export function insertRun(run: AgentRun): void {
   db()
     .prepare(
-      `INSERT INTO runs (id, repo_path, prompt, model, status, started_at, ended_at, exit_code, git_before_sha, changes_json)
-       VALUES (@id, @repo_path, @prompt, @model, @status, @started_at, @ended_at, @exit_code, @git_before_sha, @changes_json)`,
+      `INSERT INTO runs (id, repo_path, prompt, model, status, started_at, ended_at, exit_code, git_before_sha, changes_json, task_id)
+       VALUES (@id, @repo_path, @prompt, @model, @status, @started_at, @ended_at, @exit_code, @git_before_sha, @changes_json, @task_id)`,
     )
     .run({
       id: run.id,
@@ -47,6 +49,7 @@ export function insertRun(run: AgentRun): void {
       exit_code: run.exitCode ?? null,
       git_before_sha: run.gitBeforeSha ?? null,
       changes_json: run.changes ? JSON.stringify(run.changes) : null,
+      task_id: run.taskId ?? null,
     });
 }
 

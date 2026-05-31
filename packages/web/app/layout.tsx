@@ -40,6 +40,12 @@ export default function RootLayout({
                 Runs
               </Link>
               <Link
+                href="/tasks"
+                className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+              >
+                Tasks
+              </Link>
+              <Link
                 href="/new"
                 className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
               >

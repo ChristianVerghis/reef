@@ -15,6 +15,7 @@ import {
   updateRunGitBaseline,
   updateRunChanges,
 } from "../state/runs.js";
+import { findTaskByCurrentRunId, updateTaskStatus } from "../state/tasks.js";
 
 export class BadRequestError extends Error {
   constructor(message: string) {
@@ -49,6 +50,7 @@ export async function createRun(req: CreateRunRequest): Promise<AgentRun> {
     model: req.model,
     status: "queued",
     startedAt: Date.now(),
+    taskId: req.taskId ?? null,
   };
   insertRun(run);
 
@@ -137,7 +139,13 @@ function setStatus(id: string, status: RunStatus, exitCode?: number) {
 }
 
 function finalize(id: string, exitCode: number) {
-  setStatus(id, exitCode === 0 ? "done" : "failed", exitCode);
+  const status = exitCode === 0 ? "done" : "failed";
+  setStatus(id, status, exitCode);
+  // Mirror the run's outcome onto any linked task so the queue updates.
+  const linkedTask = findTaskByCurrentRunId(id);
+  if (linkedTask) {
+    updateTaskStatus(linkedTask.id, status, { endedAt: Date.now() });
+  }
 }
 
 function fail(id: string, err: unknown) {

@@ -1,17 +1,21 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { daemonUrl, stopRun, getRunDiff } from "@/lib/daemon";
+import { daemonUrl, stopRun, getRunDiff, nextTask, startTask } from "@/lib/daemon";
 import { STATUS_COLORS } from "@/lib/status";
-import type { AgentRun, RunEvent, RunStatus } from "@roost/shared";
+import type { AgentRun, RunEvent, RunStatus, Task } from "@roost/shared";
 
 export function AgentStream({ initialRun }: { initialRun: AgentRun }) {
+  const router = useRouter();
   const [run, setRun] = useState<AgentRun>(initialRun);
   const [output, setOutput] = useState<string>("");
   const [diff, setDiff] = useState<{ text: string; truncated: boolean } | null>(null);
   const [diffLoading, setDiffLoading] = useState(false);
   const [diffOpen, setDiffOpen] = useState(false);
+  const [upNext, setUpNext] = useState<Task | null>(null);
+  const [spreeBusy, setSpreeBusy] = useState(false);
   const tailRef = useRef<HTMLPreElement>(null);
 
   useEffect(() => {
@@ -19,18 +23,24 @@ export function AgentStream({ initialRun }: { initialRun: AgentRun }) {
     const onChunk = (e: MessageEvent) => append(JSON.parse(e.data) as RunEvent);
     const onStatus = async (e: MessageEvent) => {
       const event = JSON.parse(e.data) as Extract<RunEvent, { type: "status" }>;
-      // Pull the fresh row so we get the changes summary populated on completion.
       if (event.status === "done" || event.status === "failed") {
         try {
           const res = await fetch(`${daemonUrl()}/api/runs/${initialRun.id}`);
           if (res.ok) {
             const data = (await res.json()) as { run: AgentRun };
             setRun(data.run);
-            return;
           }
         } catch {
-          // fall through to optimistic update
+          setRun((prev) => ({ ...prev, status: event.status, exitCode: event.exitCode }));
         }
+        // Prefetch the next queued task so the spree CTA is ready instantly.
+        try {
+          const next = await nextTask();
+          setUpNext(next.task);
+        } catch {
+          // ignore — empty queue is the normal case
+        }
+        return;
       }
       setRun((prev) => ({ ...prev, status: event.status, exitCode: event.exitCode }));
     };
@@ -64,6 +74,18 @@ export function AgentStream({ initialRun }: { initialRun: AgentRun }) {
       setDiffOpen(true);
     } finally {
       setDiffLoading(false);
+    }
+  }
+
+  async function startNext() {
+    if (!upNext) return;
+    setSpreeBusy(true);
+    try {
+      const { run: nextRun } = await startTask(upNext.id);
+      router.push(`/agents/${nextRun.id}`);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : String(err));
+      setSpreeBusy(false);
     }
   }
 
@@ -104,6 +126,28 @@ export function AgentStream({ initialRun }: { initialRun: AgentRun }) {
         <h1 className="text-2xl font-semibold tracking-tight">{initialRun.prompt}</h1>
         <p className="text-xs font-mono text-zinc-500">{initialRun.repoPath}</p>
       </header>
+
+      {isDone && upNext && (
+        <section className="rounded-lg border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 p-4 flex items-center gap-4">
+          <span className="uppercase tracking-wide text-xs text-emerald-700 dark:text-emerald-300 font-mono shrink-0">
+            up next
+          </span>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium truncate">{upNext.title}</div>
+            <div className="text-xs font-mono text-emerald-700/70 dark:text-emerald-300/70 truncate">
+              {upNext.repoPath.split("/").slice(-2).join("/")}
+            </div>
+          </div>
+          <button
+            onClick={startNext}
+            disabled={spreeBusy}
+            autoFocus
+            className="px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium disabled:opacity-50"
+          >
+            {spreeBusy ? "starting…" : "Run next →"}
+          </button>
+        </section>
+      )}
 
       {isDone && (
         <section className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">

@@ -17,6 +17,7 @@ export const CreateRunRequest = z.object({
   repoPath: z.string().min(1),
   prompt: z.string().min(1),
   model: z.string().optional(),
+  taskId: z.string().optional(),
 });
 export type CreateRunRequest = z.infer<typeof CreateRunRequest>;
 
@@ -41,8 +42,52 @@ export const AgentRun = z.object({
     })
     .nullable()
     .optional(),
+  taskId: z.string().nullable().optional(),
 });
 export type AgentRun = z.infer<typeof AgentRun>;
+
+export const TaskStatus = z.enum([
+  "queued",
+  "running",
+  "done",
+  "failed",
+  "cancelled",
+]);
+export type TaskStatus = z.infer<typeof TaskStatus>;
+
+export const Task = z.object({
+  id: z.string(),
+  title: z.string(),
+  body: z.string(),
+  repoPath: z.string(),
+  status: TaskStatus,
+  // 1 = low, 2 = medium (default), 3 = high.
+  priority: z.number().int().min(1).max(3),
+  pinned: z.boolean(),
+  currentRunId: z.string().nullable().optional(),
+  createdAt: z.number(),
+  startedAt: z.number().nullable().optional(),
+  endedAt: z.number().nullable().optional(),
+});
+export type Task = z.infer<typeof Task>;
+
+export const CreateTaskRequest = z.object({
+  title: z.string().min(1),
+  body: z.string().default(""),
+  repoPath: z.string().min(1),
+  priority: z.number().int().min(1).max(3).default(2),
+  pinned: z.boolean().default(false),
+});
+export type CreateTaskRequest = z.infer<typeof CreateTaskRequest>;
+
+export const ListTasksResponse = z.object({ tasks: z.array(Task) });
+export type ListTasksResponse = z.infer<typeof ListTasksResponse>;
+
+export const StartTaskResponse = z.object({
+  task: Task,
+  run: AgentRun,
+});
+export type StartTaskResponse = z.infer<typeof StartTaskResponse>;
 
 export const RunDiffResponse = z.object({
   diff: z.string(),
