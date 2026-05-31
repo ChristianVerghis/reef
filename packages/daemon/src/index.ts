@@ -2,10 +2,17 @@ import { createServer } from "node:http";
 import { DAEMON_DEFAULT_PORT } from "@roost/shared";
 import { handleRequest } from "./http/router.js";
 import { ensureRoostDir } from "./lifecycle/paths.js";
+import { initDb } from "./state/db.js";
+import { reconcileOrphanedRuns } from "./state/runs.js";
 
 const port = Number(process.env.ROOST_DAEMON_PORT ?? DAEMON_DEFAULT_PORT);
 
 await ensureRoostDir();
+initDb();
+const reconciled = reconcileOrphanedRuns();
+if (reconciled > 0) {
+  console.log(`[daemon] reconciled ${reconciled} orphaned run(s) → failed`);
+}
 
 const server = createServer((req, res) => {
   handleRequest(req, res).catch((err) => {

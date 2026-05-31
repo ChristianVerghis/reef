@@ -11,9 +11,11 @@
   },
   "dependencies": {
     "@roost/shared": "workspace:*",
+    "better-sqlite3": "^11.5.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
     "@types/node": "^20",
     "tsx": "^4.22.3",
     "typescript": "^5"
