@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { createRun, listRuns, getRun, stopRun, BadRequestError } from "../agents/registry.js";
+import { createRun, listRuns, getRun, stopRun, getRunDiff, BadRequestError } from "../agents/registry.js";
 import { subscribe } from "../agents/events.js";
 import { CreateRunRequest } from "@roost/shared";
 
@@ -65,6 +65,14 @@ export async function handleRequest(req: IncomingMessage, res: ServerResponse) {
   const streamMatch = url.pathname.match(/^\/api\/runs\/([^/]+)\/stream$/);
   if (method === "GET" && streamMatch) {
     return streamRun(req, res, streamMatch[1]!);
+  }
+
+  // GET /api/runs/:id/diff
+  const diffMatch = url.pathname.match(/^\/api\/runs\/([^/]+)\/diff$/);
+  if (method === "GET" && diffMatch) {
+    const result = await getRunDiff(diffMatch[1]!);
+    if (!result) return json(res, 404, { error: "run not found" });
+    return json(res, 200, result);
   }
 
   json(res, 404, { error: "not found" });

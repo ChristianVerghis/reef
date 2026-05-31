@@ -1,4 +1,4 @@
-import type { AgentRun, CreateRunRequest, ListRunsResponse } from "@roost/shared";
+import type { AgentRun, CreateRunRequest, ListRunsResponse, RunDiffResponse } from "@roost/shared";
 
 export function daemonUrl(): string {
   return process.env.NEXT_PUBLIC_DAEMON_URL ?? "http://127.0.0.1:3738";
@@ -25,4 +25,10 @@ export async function createRun(req: CreateRunRequest): Promise<{ run: AgentRun 
 
 export async function stopRun(id: string): Promise<void> {
   await fetch(`${daemonUrl()}/api/runs/${id}`, { method: "DELETE" });
+}
+
+export async function getRunDiff(id: string): Promise<RunDiffResponse> {
+  const res = await fetch(`${daemonUrl()}/api/runs/${id}/diff`);
+  if (!res.ok) throw new Error(`getRunDiff failed: ${res.status}`);
+  return res.json();
 }

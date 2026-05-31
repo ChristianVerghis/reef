@@ -6,6 +6,7 @@ import { existsSync } from "node:fs";
 import type { AgentRun, CreateRunRequest, RunEvent, RunStatus } from "@roost/shared";
 import { runLogPath } from "../lifecycle/paths.js";
 import { emit } from "./events.js";
+import { snapshot, changesSince, diffSince } from "./git.js";
 
 interface RegistryEntry {
   run: AgentRun;
@@ -66,10 +67,14 @@ async function spawnAgent(id: string): Promise<void> {
   if (!entry) return;
   const { run } = entry;
 
+  // Capture the git baseline before spawning so we can compute a diff later.
+  const before = await snapshot(run.repoPath);
+  run.gitBeforeSha = before.sha;
+
   setStatus(id, "running");
 
   const logStream = createWriteStream(runLogPath(id), { flags: "a" });
-  logStream.write(`# roost run ${id}\n# repo: ${run.repoPath}\n# prompt: ${run.prompt}\n# started: ${new Date(run.startedAt).toISOString()}\n\n`);
+  logStream.write(`# roost run ${id}\n# repo: ${run.repoPath}\n# prompt: ${run.prompt}\n# started: ${new Date(run.startedAt).toISOString()}\n# git baseline: ${before.sha ?? "(not a git repo)"}\n\n`);
 
   // M1 uses the `claude` CLI in non-interactive mode. The Claude Agent SDK
   // swap-in happens in M2 once the runtime abstraction is in place.
@@ -101,11 +106,30 @@ async function spawnAgent(id: string): Promise<void> {
     logStream.end();
   });
 
-  proc.on("close", (code) => {
+  proc.on("close", async (code) => {
     logStream.write(`\n# exit: ${code}\n`);
+    // Compute changes against the baseline before flipping status; that way the
+    // final "done" status event already carries the changes summary for the UI.
+    try {
+      const ch = await changesSince(run.repoPath, run.gitBeforeSha ?? null);
+      run.changes = ch;
+      if (ch) {
+        logStream.write(
+          `# changes: ${ch.filesChanged} files (+${ch.insertions}/-${ch.deletions})\n`,
+        );
+      }
+    } catch (err) {
+      logStream.write(`\n[git-diff failed] ${err instanceof Error ? err.message : err}\n`);
+    }
     logStream.end();
     finalize(id, code ?? 0);
   });
+}
+
+export async function getRunDiff(id: string): Promise<{ diff: string; truncated: boolean } | null> {
+  const entry = runs.get(id);
+  if (!entry) return null;
+  return diffSince(entry.run.repoPath, entry.run.gitBeforeSha ?? null);
 }
 
 function setStatus(id: string, status: RunStatus, exitCode?: number) {

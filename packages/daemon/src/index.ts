@@ -25,8 +25,11 @@ server.listen(port, "127.0.0.1", () => {
 
 const shutdown = (signal: string) => {
   console.log(`[daemon] ${signal} — shutting down`);
+  // Force-close SSE clients (long-lived keep-alive sockets would otherwise stall
+  // server.close() and block tsx-watch from rebinding the port on hot reload).
+  server.closeAllConnections?.();
   server.close(() => process.exit(0));
-  setTimeout(() => process.exit(1), 3000).unref();
+  setTimeout(() => process.exit(0), 300).unref();
 };
 
 process.on("SIGINT", () => shutdown("SIGINT"));
