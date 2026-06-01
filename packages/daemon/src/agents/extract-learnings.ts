@@ -31,6 +31,17 @@ interface ExtractedLearning {
 }
 
 /**
+ * Auto-extraction is OFF by default — it fires an extra `claude -p` call per
+ * successful run, which counts against the user's plan allowance on top of
+ * the run itself. Opt in with REEF_EXTRACT_LEARNINGS=true (or "1") when you
+ * want the substrate to grow automatically.
+ */
+export function isExtractionEnabled(): boolean {
+  const v = process.env.REEF_EXTRACT_LEARNINGS;
+  return v === "true" || v === "1";
+}
+
+/**
  * Fire-and-forget post-run extraction. Reads the run log, asks claude to mine
  * learnings, deposits them as topsoil. Failures are logged but never propagate.
  */

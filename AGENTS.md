@@ -41,3 +41,14 @@
 - No default exports except for Next route components.
 - Errors propagate; the daemon's top-level handler logs + responds 5xx.
 - All run output is also written to `~/.reef/runs/<id>.log` for replay.
+
+## Billing-aware defaults
+
+- Every `claude` subprocess Reef spawns uses the user's Claude Code plan allowance.
+  There is no separate billing relationship — Reef just shells out to whichever
+  account `claude login` is authenticated against.
+- **Auto-extraction of learnings is OFF by default.** It fires an extra
+  `claude -p` call per successful run. Opt in with `REEF_EXTRACT_LEARNINGS=true`
+  in the daemon's environment. Future: workspace-level UI toggle.
+- The only AI calls Reef makes today: (1) the agent runs you trigger explicitly,
+  (2) auto-extraction *when enabled*. Nothing else hits a cloud model.
