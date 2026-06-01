@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { daemonUrl, stopRun, getRunDiff, nextTask, startTask } from "@/lib/daemon";
+import { daemonUrl, stopRun, getRunDiff, nextTask, startTask, listRunPrimings } from "@/lib/daemon";
 import { STATUS_COLORS } from "@/lib/status";
-import type { AgentRun, RunEvent, RunStatus, Task } from "@reef/shared";
+import type { AgentRun, Learning, RunEvent, RunStatus, Task } from "@reef/shared";
 
 export function AgentStream({ initialRun }: { initialRun: AgentRun }) {
   const router = useRouter();
@@ -16,7 +16,15 @@ export function AgentStream({ initialRun }: { initialRun: AgentRun }) {
   const [diffOpen, setDiffOpen] = useState(false);
   const [upNext, setUpNext] = useState<Task | null>(null);
   const [spreeBusy, setSpreeBusy] = useState(false);
+  const [primings, setPrimings] = useState<Learning[] | null>(null);
+  const [primingsOpen, setPrimingsOpen] = useState(false);
   const tailRef = useRef<HTMLPreElement>(null);
+
+  useEffect(() => {
+    listRunPrimings(initialRun.id)
+      .then((res) => setPrimings(res.learnings))
+      .catch(() => setPrimings([]));
+  }, [initialRun.id]);
 
   useEffect(() => {
     const es = new EventSource(`${daemonUrl()}/api/runs/${initialRun.id}/stream`);
@@ -127,6 +135,55 @@ export function AgentStream({ initialRun }: { initialRun: AgentRun }) {
         <p className="text-xs font-mono text-zinc-500">{initialRun.repoPath}</p>
       </header>
 
+      {primings && primings.length > 0 && (
+        <section className="rounded-lg border border-violet-200 dark:border-violet-900 bg-violet-50/40 dark:bg-violet-950/20">
+          <header className="flex items-center gap-3 px-4 py-3 border-b border-violet-200 dark:border-violet-900">
+            <span className="uppercase tracking-wide text-xs text-violet-700 dark:text-violet-300 font-mono">
+              primed with
+            </span>
+            <span className="text-sm">
+              <span className="font-medium">{primings.length}</span>{" "}
+              <span className="text-zinc-500">
+                learning{primings.length === 1 ? "" : "s"} from the reef
+              </span>
+            </span>
+            <button
+              onClick={() => setPrimingsOpen((o) => !o)}
+              className="ml-auto text-xs px-2.5 py-1 rounded border border-violet-300 dark:border-violet-700 hover:bg-violet-100 dark:hover:bg-violet-950/40"
+            >
+              {primingsOpen ? "Hide" : "Show"}
+            </button>
+          </header>
+          {primingsOpen && (
+            <ul className="px-4 py-3 space-y-2 text-sm">
+              {primings.map((l) => (
+                <li key={l.id} className="flex flex-col gap-0.5">
+                  <div className="flex items-center gap-2 text-xs font-mono text-zinc-500">
+                    <LayerDot layer={l.layer} />
+                    <span className="text-zinc-700 dark:text-zinc-300 font-semibold">{l.topic}</span>
+                    <span>· {l.layer}</span>
+                    <span>· conf {l.confidence.toFixed(2)}</span>
+                    <Link
+                      href={`/reef`}
+                      className="ml-auto underline underline-offset-2 hover:text-zinc-900 dark:hover:text-zinc-100"
+                    >
+                      reef
+                    </Link>
+                  </div>
+                  <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed">{l.content}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {primings && primings.length === 0 && (
+        <section className="rounded-lg border border-zinc-200 dark:border-zinc-800 px-4 py-3 text-xs font-mono text-zinc-500">
+          no substrate primed this run — the reef is empty for {initialRun.repoPath.split("/").slice(-2).join("/")}
+        </section>
+      )}
+
       {isDone && upNext && (
         <section className="rounded-lg border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 p-4 flex items-center gap-4">
           <span className="uppercase tracking-wide text-xs text-emerald-700 dark:text-emerald-300 font-mono shrink-0">
@@ -231,4 +288,16 @@ export function AgentStream({ initialRun }: { initialRun: AgentRun }) {
       </section>
     </main>
   );
+}
+
+function LayerDot({ layer }: { layer: Learning["layer"] }) {
+  const dot =
+    layer === "bedrock"
+      ? "bg-violet-500"
+      : layer === "loam"
+        ? "bg-amber-500"
+        : layer === "topsoil"
+          ? "bg-emerald-500"
+          : "bg-zinc-500";
+  return <span className={`h-2 w-2 rounded-full ${dot}`} />;
 }

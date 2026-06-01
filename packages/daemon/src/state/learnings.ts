@@ -175,3 +175,123 @@ export function topicsForRepo(repoPath: string): { topic: string; count: number 
     .all(repoPath);
   return rows;
 }
+
+/**
+ * Select the learnings that should prime an agent run on `repoPath`.
+ *
+ * Ranking: bedrock first (load-bearing), then loam (settled), then topsoil
+ * (fresh). Within each layer, confidence DESC then last_referenced_at DESC
+ * so the most-trusted + most-recent rise to the top. Fossils excluded.
+ *
+ * Caps: we stop adding learnings once either `maxCount` rows or `maxBytes`
+ * total content size is reached, whichever comes first. The byte cap protects
+ * the agent's prompt budget when a repo has hundreds of accumulated learnings.
+ */
+export function findLearningsForPriming(
+  repoPath: string,
+  opts: { maxCount?: number; maxBytes?: number } = {},
+): Learning[] {
+  const maxCount = opts.maxCount ?? 20;
+  const maxBytes = opts.maxBytes ?? 8 * 1024;
+
+  const rows = db()
+    .prepare<[string], LearningRow>(
+      `SELECT * FROM learnings
+       WHERE repo_path = ? AND layer != 'fossil'
+       ORDER BY
+         CASE layer
+           WHEN 'bedrock' THEN 0
+           WHEN 'loam' THEN 1
+           WHEN 'topsoil' THEN 2
+         END ASC,
+         confidence DESC,
+         COALESCE(last_referenced_at, 0) DESC,
+         created_at DESC`,
+    )
+    .all(repoPath);
+
+  const picked: Learning[] = [];
+  let totalBytes = 0;
+  for (const row of rows) {
+    if (picked.length >= maxCount) break;
+    const bytes = Buffer.byteLength(row.content, "utf8") + row.topic.length + 16;
+    if (totalBytes + bytes > maxBytes) break;
+    picked.push(rowToLearning(row));
+    totalBytes += bytes;
+  }
+  return picked;
+}
+
+/**
+ * Record that these learnings primed a run and bump their references_count.
+ * The bump is the side-effect that drives auto-promotion (topsoil → loam).
+ */
+export function recordPrimings(runId: string, learnings: Learning[]): void {
+  if (learnings.length === 0) return;
+  const now = Date.now();
+  const tx = db().transaction(() => {
+    const insertPriming = db().prepare(
+      `INSERT OR IGNORE INTO run_primings (run_id, learning_id, sort_order) VALUES (?, ?, ?)`,
+    );
+    const bumpRef = db().prepare(
+      `UPDATE learnings SET references_count = references_count + 1, last_referenced_at = ? WHERE id = ?`,
+    );
+    learnings.forEach((l, i) => {
+      insertPriming.run(runId, l.id, i);
+      bumpRef.run(now, l.id);
+    });
+  });
+  tx();
+}
+
+export function learningsForRun(runId: string): Learning[] {
+  const rows = db()
+    .prepare<[string], LearningRow>(
+      `SELECT l.* FROM run_primings p
+       JOIN learnings l ON l.id = p.learning_id
+       WHERE p.run_id = ?
+       ORDER BY p.sort_order ASC`,
+    )
+    .all(runId);
+  return rows.map(rowToLearning);
+}
+
+/**
+ * Compose the priming preamble for a prompt. Caller concatenates with the
+ * user's original prompt. Returns empty string when there's nothing to prime
+ * with (so the original prompt passes through unchanged).
+ */
+export function composePrimingPreamble(learnings: Learning[]): string {
+  if (learnings.length === 0) return "";
+
+  const groupedByLayer: Record<string, Learning[]> = {
+    bedrock: [],
+    loam: [],
+    topsoil: [],
+  };
+  for (const l of learnings) {
+    if (l.layer in groupedByLayer) groupedByLayer[l.layer]!.push(l);
+  }
+
+  const lines: string[] = [
+    "## Repository substrate — load-bearing context",
+    "",
+    "The following are durable learnings about this repo accumulated from prior agent runs.",
+    "Bedrock items are codified truths; loam is settled convention; topsoil is fresh and unconfirmed.",
+    "Treat bedrock as inviolable, loam as strong defaults, and topsoil as suggestions.",
+    "",
+  ];
+
+  for (const layer of ["bedrock", "loam", "topsoil"] as const) {
+    const items = groupedByLayer[layer]!;
+    if (items.length === 0) continue;
+    lines.push(`### ${layer}`);
+    for (const l of items) {
+      lines.push(`- **${l.topic}**: ${l.content.replace(/\s+/g, " ").trim()}`);
+    }
+    lines.push("");
+  }
+
+  lines.push("---", "", "## Your task", "");
+  return lines.join("\n");
+}

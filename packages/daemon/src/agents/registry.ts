@@ -17,6 +17,11 @@ import {
 } from "../state/runs.js";
 import { findTaskByCurrentRunId, updateTaskStatus } from "../state/tasks.js";
 import { extractLearningsFromRun, isExtractionEnabled } from "./extract-learnings.js";
+import {
+  composePrimingPreamble,
+  findLearningsForPriming,
+  recordPrimings,
+} from "../state/learnings.js";
 
 export class BadRequestError extends Error {
   constructor(message: string) {
@@ -80,14 +85,22 @@ async function spawnAgent(id: string): Promise<void> {
   const before = await snapshot(run.repoPath);
   updateRunGitBaseline(id, before.sha);
 
+  // Prime the agent with relevant substrate before it starts. Bedrock + loam +
+  // topsoil for this repo, ranked and capped. Recording the primings is what
+  // bumps references_count and ultimately drives auto-promotion.
+  const primed = findLearningsForPriming(run.repoPath);
+  if (primed.length > 0) recordPrimings(id, primed);
+  const preamble = composePrimingPreamble(primed);
+  const finalPrompt = preamble ? preamble + run.prompt : run.prompt;
+
   setStatus(id, "running");
 
   const logStream = createWriteStream(runLogPath(id), { flags: "a" });
   logStream.write(
-    `# reef run ${id}\n# repo: ${run.repoPath}\n# prompt: ${run.prompt}\n# started: ${new Date(run.startedAt).toISOString()}\n# git baseline: ${before.sha ?? "(not a git repo)"}\n\n`,
+    `# reef run ${id}\n# repo: ${run.repoPath}\n# prompt: ${run.prompt}\n# started: ${new Date(run.startedAt).toISOString()}\n# git baseline: ${before.sha ?? "(not a git repo)"}\n# primed: ${primed.length} learning(s) (${primed.map((l) => l.topic).join(", ") || "—"})\n\n`,
   );
 
-  const proc = spawn("claude", ["-p", run.prompt], {
+  const proc = spawn("claude", ["-p", finalPrompt], {
     cwd: run.repoPath,
     env: process.env,
     stdio: ["ignore", "pipe", "pipe"],

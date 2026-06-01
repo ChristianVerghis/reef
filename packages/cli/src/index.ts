@@ -5,6 +5,7 @@ import { next } from "./commands/next.js";
 import { dig } from "./commands/dig.js";
 import { show } from "./commands/show.js";
 import { petrify, fossilize } from "./commands/petrify.js";
+import { brief } from "./commands/brief.js";
 
 const [, , cmd = "start", ...args] = process.argv;
 
@@ -17,6 +18,7 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
   show,
   petrify,
   fossilize,
+  brief,
   help: () => printHelp(),
   "--help": () => printHelp(),
   "-h": () => printHelp(),
@@ -41,6 +43,8 @@ workflow:
   reef next               start the highest-priority queued task
 
 strata:
+  reef brief [<repo>]     preview the learnings that would prime an agent run
+                          (defaults to cwd)
   reef dig <topic>        show learnings on a topic (bedrock → loam → topsoil)
                           flags: --repo <path> to scope by repo
   reef show <id>          show one learning in full

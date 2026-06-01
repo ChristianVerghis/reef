@@ -85,6 +85,17 @@ function applySchema(d: Database.Database) {
 
     CREATE INDEX IF NOT EXISTS idx_learnings_repo_topic ON learnings(repo_path, topic);
     CREATE INDEX IF NOT EXISTS idx_learnings_layer ON learnings(layer, repo_path);
+
+    -- Which learnings were used to prime a run's prompt. This is THE signal
+    -- of load-bearingness — every priming row is durable evidence that a
+    -- learning shaped real work, and drives topsoil → loam auto-promotion.
+    CREATE TABLE IF NOT EXISTS run_primings (
+      run_id      TEXT NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+      learning_id TEXT NOT NULL REFERENCES learnings(id) ON DELETE CASCADE,
+      sort_order  INTEGER NOT NULL,
+      PRIMARY KEY (run_id, learning_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_run_primings_order ON run_primings(run_id, sort_order);
   `);
 
   // Forward-compatible migration: add runs.task_id if upgrading from a DB that

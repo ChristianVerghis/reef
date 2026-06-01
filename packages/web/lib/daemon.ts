@@ -101,3 +101,17 @@ export async function promoteLearning(id: string, layer: Layer): Promise<{ learn
   if (!res.ok) throw new Error(`promoteLearning failed: ${res.status}`);
   return res.json();
 }
+
+export async function listRunPrimings(runId: string): Promise<{ learnings: Learning[] }> {
+  const res = await fetch(`${daemonUrl()}/api/runs/${runId}/primings`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`listRunPrimings failed: ${res.status}`);
+  return res.json();
+}
+
+export async function previewBrief(repoPath: string): Promise<{ learnings: Learning[] }> {
+  const url = new URL(`${daemonUrl()}/api/brief`);
+  url.searchParams.set("repo", repoPath);
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`previewBrief failed: ${res.status}`);
+  return res.json();
+}

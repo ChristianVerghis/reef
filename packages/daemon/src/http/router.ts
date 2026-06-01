@@ -15,7 +15,9 @@ import {
 import {
   digByTopic,
   findLearning,
+  findLearningsForPriming,
   insertLearning,
+  learningsForRun,
   listAllLearnings,
   promoteLayer,
   topicsForRepo,
@@ -92,6 +94,20 @@ export async function handleRequest(req: IncomingMessage, res: ServerResponse) {
     const result = await getRunDiff(diffMatch[1]!);
     if (!result) return json(res, 404, { error: "run not found" });
     return json(res, 200, result);
+  }
+
+  // GET /api/runs/:id/primings  → learnings that primed this run
+  const primingsMatch = url.pathname.match(/^\/api\/runs\/([^/]+)\/primings$/);
+  if (method === "GET" && primingsMatch) {
+    if (!getRun(primingsMatch[1]!)) return json(res, 404, { error: "run not found" });
+    return json(res, 200, { learnings: learningsForRun(primingsMatch[1]!) });
+  }
+
+  // GET /api/brief?repo=<path>  → preview what would prime a run on this repo
+  if (method === "GET" && url.pathname === "/api/brief") {
+    const repo = url.searchParams.get("repo");
+    if (!repo) return json(res, 400, { error: "repo query param required" });
+    return json(res, 200, { learnings: findLearningsForPriming(repo) });
   }
 
   // GET /api/tasks
