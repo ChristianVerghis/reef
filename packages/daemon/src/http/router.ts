@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createRun, listRuns, getRun, stopRun, getRunDiff, BadRequestError } from "../agents/registry.js";
 import { subscribe } from "../agents/events.js";
-import { CreateRunRequest, CreateTaskRequest } from "@reef/shared";
+import { CreateRunRequest, CreateTaskRequest, CreateLearningRequest, Layer } from "@reef/shared";
 import { randomUUID } from "node:crypto";
 import {
   deleteTask,
@@ -12,6 +12,15 @@ import {
   makeTask,
   updateTaskStatus,
 } from "../state/tasks.js";
+import {
+  digByTopic,
+  findLearning,
+  insertLearning,
+  listAllLearnings,
+  promoteLayer,
+  topicsForRepo,
+} from "../state/learnings.js";
+import type { Learning } from "@reef/shared";
 
 const CORS_HEADERS: Record<string, string> = {
   "access-control-allow-origin": "*",
@@ -149,6 +158,66 @@ export async function handleRequest(req: IncomingMessage, res: ServerResponse) {
     const task = findTask(taskIdMatch[1]!);
     if (!task) return json(res, 404, { error: "task not found" });
     return json(res, 200, { task });
+  }
+
+  // GET /api/learnings  (?topic= ?repo=)
+  if (method === "GET" && url.pathname === "/api/learnings") {
+    const topic = url.searchParams.get("topic");
+    const repo = url.searchParams.get("repo") ?? undefined;
+    if (topic) {
+      return json(res, 200, { learnings: digByTopic(topic, repo) });
+    }
+    return json(res, 200, { learnings: listAllLearnings() });
+  }
+
+  // GET /api/learnings/topics?repo=
+  if (method === "GET" && url.pathname === "/api/learnings/topics") {
+    const repo = url.searchParams.get("repo");
+    if (!repo) return json(res, 400, { error: "repo query param required" });
+    return json(res, 200, { topics: topicsForRepo(repo) });
+  }
+
+  // POST /api/learnings — manual creation (CLI/UI seeds bedrock-grade truths)
+  if (method === "POST" && url.pathname === "/api/learnings") {
+    const body = await readJson(req);
+    const parsed = CreateLearningRequest.safeParse(body);
+    if (!parsed.success) {
+      return json(res, 400, { error: "invalid request", details: parsed.error.flatten() });
+    }
+    const learning: Learning = {
+      id: randomUUID().slice(0, 8),
+      content: parsed.data.content,
+      topic: parsed.data.topic,
+      layer: "topsoil",
+      sourceRunId: parsed.data.sourceRunId,
+      repoPath: parsed.data.repoPath,
+      confidence: parsed.data.confidence,
+      referencesCount: 0,
+      createdAt: Date.now(),
+    };
+    insertLearning(learning);
+    return json(res, 201, { learning });
+  }
+
+  // GET/POST /api/learnings/:id  +  POST /api/learnings/:id/promote
+  const learningPromoteMatch = url.pathname.match(/^\/api\/learnings\/([^/]+)\/promote$/);
+  if (method === "POST" && learningPromoteMatch) {
+    const data = (await readJson(req)) as { layer?: string };
+    const parsedLayer = Layer.safeParse(data.layer);
+    if (!parsedLayer.success) {
+      return json(res, 400, { error: "layer must be topsoil|loam|bedrock|fossil" });
+    }
+    const ok = promoteLayer(learningPromoteMatch[1]!, parsedLayer.data);
+    if (!ok) return json(res, 404, { error: "learning not found" });
+    const updated = findLearning(learningPromoteMatch[1]!);
+    return json(res, 200, { learning: updated });
+  }
+
+  const learningIdMatch = url.pathname.match(/^\/api\/learnings\/([^/]+)$/);
+  if (method === "GET" && learningIdMatch) {
+    const learning = findLearning(learningIdMatch[1]!);
+    if (!learning) return json(res, 404, { error: "learning not found" });
+    return json(res, 200, { learning });
   }
 
   json(res, 404, { error: "not found" });

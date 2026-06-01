@@ -4,6 +4,7 @@ import { handleRequest } from "./http/router.js";
 import { ensureReefDir } from "./lifecycle/paths.js";
 import { initDb } from "./state/db.js";
 import { reconcileOrphanedRuns } from "./state/runs.js";
+import { promoteEligibleLearnings } from "./state/learnings.js";
 
 const port = Number(process.env.REEF_DAEMON_PORT ?? DAEMON_DEFAULT_PORT);
 
@@ -12,6 +13,10 @@ initDb();
 const reconciled = reconcileOrphanedRuns();
 if (reconciled > 0) {
   console.log(`[daemon] reconciled ${reconciled} orphaned run(s) → failed`);
+}
+const promoted = promoteEligibleLearnings();
+if (promoted > 0) {
+  console.log(`[daemon] promoted ${promoted} learning(s): topsoil → loam`);
 }
 
 const server = createServer((req, res) => {

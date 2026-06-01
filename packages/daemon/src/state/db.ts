@@ -65,6 +65,26 @@ function applySchema(d: Database.Database) {
 
     CREATE INDEX IF NOT EXISTS idx_tasks_queue
       ON tasks(status, pinned DESC, priority DESC, created_at ASC);
+
+    -- Strata. Each learning is one durable fact about a repo. Layers progress:
+    -- topsoil (fresh, low trust) → loam (referenced, settled) → bedrock (codified)
+    -- with fossil as the terminal "outdated but preserved" state.
+    CREATE TABLE IF NOT EXISTS learnings (
+      id                 TEXT PRIMARY KEY,
+      content            TEXT NOT NULL,
+      topic              TEXT NOT NULL,
+      layer              TEXT NOT NULL DEFAULT 'topsoil',
+      source_run_id      TEXT REFERENCES runs(id) ON DELETE SET NULL,
+      repo_path          TEXT NOT NULL,
+      confidence         REAL NOT NULL DEFAULT 0.5,
+      references_count   INTEGER NOT NULL DEFAULT 0,
+      created_at         INTEGER NOT NULL,
+      last_referenced_at INTEGER,
+      promoted_at        INTEGER
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_learnings_repo_topic ON learnings(repo_path, topic);
+    CREATE INDEX IF NOT EXISTS idx_learnings_layer ON learnings(layer, repo_path);
   `);
 
   // Forward-compatible migration: add runs.task_id if upgrading from a DB that

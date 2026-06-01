@@ -2,6 +2,9 @@ import type {
   AgentRun,
   CreateRunRequest,
   CreateTaskRequest,
+  Layer,
+  Learning,
+  ListLearningsResponse,
   ListRunsResponse,
   ListTasksResponse,
   RunDiffResponse,
@@ -78,4 +81,23 @@ export async function startTask(id: string): Promise<StartTaskResponse> {
 
 export async function deleteTask(id: string): Promise<void> {
   await fetch(`${daemonUrl()}/api/tasks/${id}`, { method: "DELETE" });
+}
+
+export async function listLearnings(opts: { topic?: string; repo?: string } = {}): Promise<ListLearningsResponse> {
+  const url = new URL(`${daemonUrl()}/api/learnings`);
+  if (opts.topic) url.searchParams.set("topic", opts.topic);
+  if (opts.repo) url.searchParams.set("repo", opts.repo);
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`listLearnings failed: ${res.status}`);
+  return res.json();
+}
+
+export async function promoteLearning(id: string, layer: Layer): Promise<{ learning: Learning }> {
+  const res = await fetch(`${daemonUrl()}/api/learnings/${id}/promote`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ layer }),
+  });
+  if (!res.ok) throw new Error(`promoteLearning failed: ${res.status}`);
+  return res.json();
 }

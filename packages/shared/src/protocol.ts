@@ -99,3 +99,33 @@ export const ListRunsResponse = z.object({
   runs: z.array(AgentRun),
 });
 export type ListRunsResponse = z.infer<typeof ListRunsResponse>;
+
+export const Layer = z.enum(["topsoil", "loam", "bedrock", "fossil"]);
+export type Layer = z.infer<typeof Layer>;
+
+export const Learning = z.object({
+  id: z.string(),
+  content: z.string(),
+  topic: z.string(),
+  layer: Layer,
+  sourceRunId: z.string().nullable().optional(),
+  repoPath: z.string(),
+  confidence: z.number().min(0).max(1),
+  referencesCount: z.number().int(),
+  createdAt: z.number(),
+  lastReferencedAt: z.number().nullable().optional(),
+  promotedAt: z.number().nullable().optional(),
+});
+export type Learning = z.infer<typeof Learning>;
+
+export const ListLearningsResponse = z.object({ learnings: z.array(Learning) });
+export type ListLearningsResponse = z.infer<typeof ListLearningsResponse>;
+
+export const CreateLearningRequest = z.object({
+  content: z.string().min(1),
+  topic: z.string().min(1),
+  repoPath: z.string().min(1),
+  confidence: z.number().min(0).max(1).default(0.5),
+  sourceRunId: z.string().optional(),
+});
+export type CreateLearningRequest = z.infer<typeof CreateLearningRequest>;

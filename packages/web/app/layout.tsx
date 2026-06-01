@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "reef",
-  description: "Local-first AI cockpit for orchestrating coding agents.",
+  description: "Substrate beneath the codebase. Strata of accumulating knowledge.",
 };
 
 export default function RootLayout({
@@ -44,6 +44,12 @@ export default function RootLayout({
                 className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
               >
                 Tasks
+              </Link>
+              <Link
+                href="/reef"
+                className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+              >
+                Reef
               </Link>
               <Link
                 href="/new"

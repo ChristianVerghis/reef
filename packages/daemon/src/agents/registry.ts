@@ -16,6 +16,7 @@ import {
   updateRunChanges,
 } from "../state/runs.js";
 import { findTaskByCurrentRunId, updateTaskStatus } from "../state/tasks.js";
+import { extractLearningsFromRun } from "./extract-learnings.js";
 
 export class BadRequestError extends Error {
   constructor(message: string) {
@@ -145,6 +146,21 @@ function finalize(id: string, exitCode: number) {
   const linkedTask = findTaskByCurrentRunId(id);
   if (linkedTask) {
     updateTaskStatus(linkedTask.id, status, { endedAt: Date.now() });
+  }
+  // Fire-and-forget: mine learnings from successful runs. Failures here never
+  // block the run lifecycle or surface to the user. Future: gate behind a
+  // workspace-level toggle so devs can opt out of the extra cloud call.
+  if (status === "done") {
+    const run = findRun(id);
+    if (run) {
+      queueMicrotask(() =>
+        extractLearningsFromRun({
+          runId: run.id,
+          repoPath: run.repoPath,
+          prompt: run.prompt,
+        }).catch((err) => console.warn(`[extract] background failure:`, err)),
+      );
+    }
   }
 }
 
