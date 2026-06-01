@@ -1,4 +1,4 @@
-# Roost
+# Reef
 
 Local-first AI cockpit for orchestrating coding agents across many git repos.
 

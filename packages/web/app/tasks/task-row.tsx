@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { startTask, deleteTask } from "@/lib/daemon";
-import type { Task } from "@roost/shared";
+import type { Task } from "@reef/shared";
 
 const PRIORITY_LABEL: Record<number, string> = { 1: "Low", 2: "Med", 3: "High" };
 const PRIORITY_COLOR: Record<number, string> = {

@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createRun, listRuns, getRun, stopRun, getRunDiff, BadRequestError } from "../agents/registry.js";
 import { subscribe } from "../agents/events.js";
-import { CreateRunRequest, CreateTaskRequest } from "@roost/shared";
+import { CreateRunRequest, CreateTaskRequest } from "@reef/shared";
 import { randomUUID } from "node:crypto";
 import {
   deleteTask,

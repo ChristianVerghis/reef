@@ -20,7 +20,7 @@ importers:
 
   packages/cli:
     dependencies:
-      '@roost/shared':
+      '@reef/shared':
         specifier: workspace:*
         version: link:../shared
     devDependencies:
@@ -36,7 +36,7 @@ importers:
 
   packages/daemon:
     dependencies:
-      '@roost/shared':
+      '@reef/shared':
         specifier: workspace:*
         version: link:../shared
       better-sqlite3:
@@ -71,7 +71,7 @@ importers:
 
   packages/web:
     dependencies:
-      '@roost/shared':
+      '@reef/shared':
         specifier: workspace:*
         version: link:../shared
       next:

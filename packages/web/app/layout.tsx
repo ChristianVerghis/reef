@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "roost",
+  title: "reef",
   description: "Local-first AI cockpit for orchestrating coding agents.",
 };
 
@@ -30,7 +30,7 @@ export default function RootLayout({
         <nav className="border-b border-zinc-200 dark:border-zinc-800">
           <div className="mx-auto max-w-5xl px-6 py-4 flex items-center justify-between">
             <Link href="/" className="font-mono text-sm tracking-tight">
-              roost
+              reef
             </Link>
             <div className="flex gap-5 text-sm">
               <Link

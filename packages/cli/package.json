@@ -1,17 +1,17 @@
 {
-  "name": "@roost/cli",
+  "name": "@reef/cli",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "bin": {
-    "roost": "./bin.js"
+    "reef": "./bin.js"
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@roost/shared": "workspace:*"
+    "@reef/shared": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20",

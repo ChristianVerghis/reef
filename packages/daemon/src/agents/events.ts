@@ -1,5 +1,5 @@
 import { EventEmitter } from "node:events";
-import type { RunEvent } from "@roost/shared";
+import type { RunEvent } from "@reef/shared";
 import { persistEvent, replayEvents, maxEventId } from "../state/events.js";
 
 const bus = new EventEmitter();

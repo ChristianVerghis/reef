@@ -25,13 +25,13 @@ if (!handler) {
 await handler(args);
 
 function printHelp() {
-  console.log(`roost — local AI cockpit
+  console.log(`reef — local AI cockpit
 
 usage:
-  roost start         start the daemon + web (foreground) and open the UI
-  roost status        list current runs from the daemon
-  roost stop <id>     stop a running agent
-  roost next          start the highest-priority queued task and print its URL
-  roost help          show this message
+  reef start         start the daemon + web (foreground) and open the UI
+  reef status        list current runs from the daemon
+  reef stop <id>     stop a running agent
+  reef next          start the highest-priority queued task and print its URL
+  reef help          show this message
 `);
 }

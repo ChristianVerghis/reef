@@ -7,13 +7,13 @@ const procs = [
   {
     name: "daemon",
     cmd: "pnpm",
-    args: ["--filter", "@roost/daemon", "dev"],
+    args: ["--filter", "@reef/daemon", "dev"],
     color: "\x1b[36m",
   },
   {
     name: "web   ",
     cmd: "pnpm",
-    args: ["--filter", "@roost/web", "dev"],
+    args: ["--filter", "@reef/web", "dev"],
     color: "\x1b[35m",
   },
 ];
@@ -37,4 +37,4 @@ function prefix(tag: string, buf: Buffer): string {
     .join("\n");
 }
 
-console.log("roost dev — daemon + web. Open http://localhost:3737");
+console.log("reef dev — daemon + web. Open http://localhost:3737");

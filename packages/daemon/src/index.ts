@@ -1,13 +1,13 @@
 import { createServer } from "node:http";
-import { DAEMON_DEFAULT_PORT } from "@roost/shared";
+import { DAEMON_DEFAULT_PORT } from "@reef/shared";
 import { handleRequest } from "./http/router.js";
-import { ensureRoostDir } from "./lifecycle/paths.js";
+import { ensureReefDir } from "./lifecycle/paths.js";
 import { initDb } from "./state/db.js";
 import { reconcileOrphanedRuns } from "./state/runs.js";
 
-const port = Number(process.env.ROOST_DAEMON_PORT ?? DAEMON_DEFAULT_PORT);
+const port = Number(process.env.REEF_DAEMON_PORT ?? DAEMON_DEFAULT_PORT);
 
-await ensureRoostDir();
+await ensureReefDir();
 initDb();
 const reconciled = reconcileOrphanedRuns();
 if (reconciled > 0) {

@@ -1,4 +1,4 @@
-import { DAEMON_DEFAULT_PORT, type ListRunsResponse } from "@roost/shared";
+import { DAEMON_DEFAULT_PORT, type ListRunsResponse } from "@reef/shared";
 
 const STATUS_COLORS: Record<string, string> = {
   queued: "\x1b[90m",
@@ -20,12 +20,12 @@ export async function status(_args: string[]): Promise<void> {
     console.error(
       `daemon unreachable at ${url} (${err instanceof Error ? err.message : err}).`,
     );
-    console.error("run `roost start` first.");
+    console.error("run `reef start` first.");
     process.exit(1);
   }
 
   if (body.runs.length === 0) {
-    console.log("no runs yet — `roost start` then create one in the UI.");
+    console.log("no runs yet — `reef start` then create one in the UI.");
     return;
   }
 

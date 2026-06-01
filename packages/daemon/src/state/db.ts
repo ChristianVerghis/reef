@@ -1,13 +1,13 @@
 import Database from "better-sqlite3";
 import path from "node:path";
 import { mkdirSync } from "node:fs";
-import { ROOST_HOME } from "../lifecycle/paths.js";
+import { REEF_HOME } from "../lifecycle/paths.js";
 
 let _db: Database.Database | null = null;
 
 export function initDb(filePath?: string): Database.Database {
   if (_db) return _db;
-  const file = filePath ?? path.join(ROOST_HOME, "state.db");
+  const file = filePath ?? path.join(REEF_HOME, "state.db");
   mkdirSync(path.dirname(file), { recursive: true });
   _db = new Database(file);
   _db.pragma("journal_mode = WAL");

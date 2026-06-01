@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { DAEMON_DEFAULT_PORT, WEB_DEFAULT_PORT } from "@roost/shared";
+import { DAEMON_DEFAULT_PORT, WEB_DEFAULT_PORT } from "@reef/shared";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "..", "..", "..", "..");
@@ -9,8 +9,8 @@ const repoRoot = path.resolve(here, "..", "..", "..", "..");
 export async function start(_args: string[]): Promise<void> {
   const procs: { name: string; color: string; child: ChildProcess }[] = [];
 
-  procs.push(launch("daemon", "\x1b[36m", ["--filter", "@roost/daemon", "dev"]));
-  procs.push(launch("web   ", "\x1b[35m", ["--filter", "@roost/web", "dev"]));
+  procs.push(launch("daemon", "\x1b[36m", ["--filter", "@reef/daemon", "dev"]));
+  procs.push(launch("web   ", "\x1b[35m", ["--filter", "@reef/web", "dev"]));
 
   const webUrl = `http://localhost:${WEB_DEFAULT_PORT}`;
   const daemonUrl = `http://127.0.0.1:${DAEMON_DEFAULT_PORT}`;
@@ -18,7 +18,7 @@ export async function start(_args: string[]): Promise<void> {
   // Wait for the web server to respond before opening the browser.
   void waitFor(webUrl).then(() => openBrowser(webUrl));
 
-  console.log(`roost ready
+  console.log(`reef ready
   web:    ${webUrl}
   daemon: ${daemonUrl}
   ctrl-c to quit

@@ -1,4 +1,4 @@
-import type { RunStatus } from "@roost/shared";
+import type { RunStatus } from "@reef/shared";
 
 export const STATUS_COLORS: Record<RunStatus, { dot: string; text: string; label: string }> = {
   queued: { dot: "bg-zinc-400", text: "text-zinc-500", label: "Queued" },

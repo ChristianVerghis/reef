@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { daemonUrl, stopRun, getRunDiff, nextTask, startTask } from "@/lib/daemon";
 import { STATUS_COLORS } from "@/lib/status";
-import type { AgentRun, RunEvent, RunStatus, Task } from "@roost/shared";
+import type { AgentRun, RunEvent, RunStatus, Task } from "@reef/shared";
 
 export function AgentStream({ initialRun }: { initialRun: AgentRun }) {
   const router = useRouter();

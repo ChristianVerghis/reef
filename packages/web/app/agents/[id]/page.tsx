@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { daemonUrl } from "@/lib/daemon";
 import { AgentStream } from "./stream";
-import type { AgentRun } from "@roost/shared";
+import type { AgentRun } from "@reef/shared";
 
 export const dynamic = "force-dynamic";
 

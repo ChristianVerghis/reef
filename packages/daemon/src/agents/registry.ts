@@ -3,7 +3,7 @@ import { createWriteStream } from "node:fs";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { existsSync } from "node:fs";
-import type { AgentRun, CreateRunRequest, RunStatus } from "@roost/shared";
+import type { AgentRun, CreateRunRequest, RunStatus } from "@reef/shared";
 import { runLogPath } from "../lifecycle/paths.js";
 import { emit } from "./events.js";
 import { snapshot, changesSince, diffSince } from "./git.js";
@@ -83,7 +83,7 @@ async function spawnAgent(id: string): Promise<void> {
 
   const logStream = createWriteStream(runLogPath(id), { flags: "a" });
   logStream.write(
-    `# roost run ${id}\n# repo: ${run.repoPath}\n# prompt: ${run.prompt}\n# started: ${new Date(run.startedAt).toISOString()}\n# git baseline: ${before.sha ?? "(not a git repo)"}\n\n`,
+    `# reef run ${id}\n# repo: ${run.repoPath}\n# prompt: ${run.prompt}\n# started: ${new Date(run.startedAt).toISOString()}\n# git baseline: ${before.sha ?? "(not a git repo)"}\n\n`,
   );
 
   const proc = spawn("claude", ["-p", run.prompt], {
@@ -150,7 +150,7 @@ function finalize(id: string, exitCode: number) {
 
 function fail(id: string, err: unknown) {
   const message = err instanceof Error ? err.message : String(err);
-  emit({ type: "stderr", runId: id, chunk: `\n[roost] ${message}\n`, ts: Date.now() });
+  emit({ type: "stderr", runId: id, chunk: `\n[reef] ${message}\n`, ts: Date.now() });
   setStatus(id, "failed", -1);
 }
 

@@ -1,9 +1,9 @@
-import { DAEMON_DEFAULT_PORT } from "@roost/shared";
+import { DAEMON_DEFAULT_PORT } from "@reef/shared";
 
 export async function stop(args: string[]): Promise<void> {
   const id = args[0];
   if (!id) {
-    console.error("usage: roost stop <id>");
+    console.error("usage: reef stop <id>");
     process.exit(1);
   }
   const url = `http://127.0.0.1:${DAEMON_DEFAULT_PORT}/api/runs/${id}`;

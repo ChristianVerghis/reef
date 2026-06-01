@@ -7,7 +7,7 @@ import type {
   RunDiffResponse,
   StartTaskResponse,
   Task,
-} from "@roost/shared";
+} from "@reef/shared";
 
 export function daemonUrl(): string {
   return process.env.NEXT_PUBLIC_DAEMON_URL ?? "http://127.0.0.1:3738";

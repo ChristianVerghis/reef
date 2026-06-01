@@ -26,7 +26,7 @@ export default async function TasksPage() {
         </span>
         <h1 className="text-4xl font-semibold tracking-tight">Tasks</h1>
         <p className="text-zinc-600 dark:text-zinc-400 max-w-prose">
-          Queued work items. <code className="font-mono text-xs">roost next</code> picks
+          Queued work items. <code className="font-mono text-xs">reef next</code> picks
           the highest-priority pinned task and starts a run. The agent inherits the
           task&apos;s repo and prompt.
         </p>

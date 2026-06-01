@@ -1,4 +1,4 @@
-import type { RunEvent } from "@roost/shared";
+import type { RunEvent } from "@reef/shared";
 import { db } from "./db.js";
 
 interface EventRow {

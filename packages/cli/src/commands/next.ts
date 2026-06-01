@@ -1,4 +1,4 @@
-import { DAEMON_DEFAULT_PORT, WEB_DEFAULT_PORT, type Task, type AgentRun } from "@roost/shared";
+import { DAEMON_DEFAULT_PORT, WEB_DEFAULT_PORT, type Task, type AgentRun } from "@reef/shared";
 
 const DAEMON = `http://127.0.0.1:${DAEMON_DEFAULT_PORT}`;
 
@@ -8,7 +8,7 @@ export async function next(_args: string[]): Promise<void> {
     nextRes = await fetch(`${DAEMON}/api/tasks/next`);
   } catch (err) {
     console.error(`daemon unreachable at ${DAEMON} (${err instanceof Error ? err.message : err}).`);
-    console.error("run `roost start` first.");
+    console.error("run `reef start` first.");
     process.exit(1);
   }
   if (!nextRes.ok) {
@@ -17,7 +17,7 @@ export async function next(_args: string[]): Promise<void> {
   }
   const { task } = (await nextRes.json()) as { task: Task | null };
   if (!task) {
-    console.log("queue is empty — `roost` web UI → Tasks to add one.");
+    console.log("queue is empty — `reef` web UI → Tasks to add one.");
     return;
   }
 

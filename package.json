@@ -1,17 +1,17 @@
 {
-  "name": "roost",
+  "name": "reef",
   "version": "0.0.0",
   "private": true,
   "description": "Local-first AI cockpit for orchestrating coding agents across many repos",
   "bin": {
-    "roost": "./packages/cli/bin.js"
+    "reef": "./packages/cli/bin.js"
   },
   "scripts": {
     "dev": "tsx scripts/dev.ts",
     "build": "pnpm -r --filter=./packages/* build",
     "typecheck": "pnpm -r --filter=./packages/* typecheck",
     "lint": "pnpm -r --filter=./packages/* lint",
-    "roost": "node packages/cli/bin.js"
+    "reef": "node packages/cli/bin.js"
   },
   "devDependencies": {
     "@types/node": "^20",

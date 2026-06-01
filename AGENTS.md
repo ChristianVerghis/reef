@@ -1,4 +1,4 @@
-# Roost — agent notes
+# Reef — agent notes
 
 ## This is NOT the Next.js you know
 
@@ -6,8 +6,8 @@
 
 ## Architecture
 
-- **Daemon is the source of truth.** All state lives in SQLite (`~/.roost/state.db`). Never have the web app or CLI touch the DB or spawn subprocesses directly — go through the daemon's HTTP API.
-- **Three processes, one binary.** `roost start` (CLI) forks the daemon and the web dev/prod server. Daemon owns state + agent subprocesses; web is a thin view.
+- **Daemon is the source of truth.** All state lives in SQLite (`~/.reef/state.db`). Never have the web app or CLI touch the DB or spawn subprocesses directly — go through the daemon's HTTP API.
+- **Three processes, one binary.** `reef start` (CLI) forks the daemon and the web dev/prod server. Daemon owns state + agent subprocesses; web is a thin view.
 - **macOS + Linux only** in v1 (unix-socket IPC for CLI ↔ daemon).
 
 ## Status colors (semantic)
@@ -29,7 +29,7 @@
 
 ## What lives where
 
-- `packages/cli` — clipanion CLI entrypoint (`roost`).
+- `packages/cli` — clipanion CLI entrypoint (`reef`).
 - `packages/daemon` — long-lived Node HTTP server, agent runner, SQLite state.
 - `packages/web` — Next.js App Router UI.
 - `packages/shared` — types, zod schemas, IPC protocol shared by all three.
@@ -40,4 +40,4 @@
 - Imperative file names: `start.ts`, not `starter.ts`.
 - No default exports except for Next route components.
 - Errors propagate; the daemon's top-level handler logs + responds 5xx.
-- All run output is also written to `~/.roost/runs/<id>.log` for replay.
+- All run output is also written to `~/.reef/runs/<id>.log` for replay.

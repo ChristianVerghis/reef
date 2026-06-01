@@ -1,5 +1,5 @@
 {
-  "name": "@roost/web",
+  "name": "@reef/web",
   "version": "0.0.0",
   "private": true,
   "scripts": {
@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@roost/shared": "workspace:*",
+    "@reef/shared": "workspace:*",
     "next": "16.2.6",
     "react": "19.2.4",
     "react-dom": "19.2.4"
