@@ -6,11 +6,13 @@ import { dig } from "./commands/dig.js";
 import { show } from "./commands/show.js";
 import { petrify, fossilize } from "./commands/petrify.js";
 import { brief } from "./commands/brief.js";
+import { shutdown } from "./commands/shutdown.js";
 
 const [, , cmd = "start", ...args] = process.argv;
 
 const commands: Record<string, (args: string[]) => Promise<void> | void> = {
   start,
+  shutdown,
   status,
   stop,
   next,
@@ -37,8 +39,9 @@ function printHelp() {
   console.log(`reef — substrate beneath your codebase
 
 workflow:
-  reef start              start the daemon + web (foreground) and open the UI
-  reef status             list current runs from the daemon
+  reef start [--force]    start the daemon + web (or just open the UI if already up)
+  reef shutdown           stop the running daemon gracefully
+  reef status             daemon health + list of runs
   reef stop <id>          stop a running agent
   reef next               start the highest-priority queued task
 

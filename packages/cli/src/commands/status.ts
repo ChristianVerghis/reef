@@ -1,4 +1,5 @@
-import { DAEMON_DEFAULT_PORT, type ListRunsResponse } from "@reef/shared";
+import { type ListRunsResponse } from "@reef/shared";
+import { findLiveDaemon, readPidfile } from "../lib/pidfile.js";
 
 const STATUS_COLORS: Record<string, string> = {
   queued: "\x1b[90m",
@@ -10,7 +11,25 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export async function status(_args: string[]): Promise<void> {
-  const url = `http://127.0.0.1:${DAEMON_DEFAULT_PORT}/api/runs`;
+  // First, characterize the daemon itself. The pidfile gives us a richer
+  // picture than just "did the HTTP call work?" — distinguishes "no daemon"
+  // from "stale pidfile" from "process alive but hung."
+  const live = findLiveDaemon();
+  const file = readPidfile();
+
+  if (!live) {
+    if (file) {
+      console.error(
+        `daemon: ❌ pidfile points at pid ${file.pid} but that process is dead (stale pidfile).`,
+      );
+      console.error("        run 'reef start' to launch a fresh daemon.");
+    } else {
+      console.error("daemon: ❌ not running — 'reef start' to launch.");
+    }
+    process.exit(1);
+  }
+
+  const url = `http://127.0.0.1:${live.port}/api/runs`;
   let body: ListRunsResponse;
   try {
     const res = await fetch(url);
@@ -18,24 +37,29 @@ export async function status(_args: string[]): Promise<void> {
     body = (await res.json()) as ListRunsResponse;
   } catch (err) {
     console.error(
-      `daemon unreachable at ${url} (${err instanceof Error ? err.message : err}).`,
+      `daemon: ⚠️  alive (pid ${live.pid}) but unresponsive at ${url} — ${err instanceof Error ? err.message : err}`,
     );
-    console.error("run `reef start` first.");
     process.exit(1);
   }
 
+  const ageMin = Math.floor((Date.now() - live.startedAt) / 60_000);
+  console.log(
+    `daemon: \x1b[32m✓\x1b[0m running (pid ${live.pid}, port ${live.port}, up ${ageMin}m)`,
+  );
+
   if (body.runs.length === 0) {
-    console.log("no runs yet — `reef start` then create one in the UI.");
+    console.log("runs:   none yet — open the UI and start one, or `reef next`.");
     return;
   }
 
+  console.log(`runs:   ${body.runs.length}`);
   for (const run of body.runs) {
     const color = STATUS_COLORS[run.status] ?? "";
     const reset = color ? "\x1b[0m" : "";
     const repo = run.repoPath.split("/").slice(-2).join("/");
     const prompt = run.prompt.replace(/\s+/g, " ").slice(0, 60);
     console.log(
-      `${color}● ${run.status.padEnd(11)}${reset} ${run.id}  ${repo.padEnd(28)}  ${prompt}`,
+      `  ${color}● ${run.status.padEnd(11)}${reset} ${run.id}  ${repo.padEnd(28)}  ${prompt}`,
     );
   }
 }

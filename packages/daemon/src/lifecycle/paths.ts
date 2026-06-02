@@ -4,6 +4,7 @@ import os from "node:os";
 
 export const REEF_HOME = process.env.REEF_HOME ?? path.join(os.homedir(), ".reef");
 export const RUNS_DIR = path.join(REEF_HOME, "runs");
+export const DAEMON_PIDFILE = path.join(REEF_HOME, "daemon.pid");
 
 export async function ensureReefDir(): Promise<void> {
   await mkdir(RUNS_DIR, { recursive: true });

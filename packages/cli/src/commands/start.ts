@@ -2,11 +2,28 @@ import { spawn, type ChildProcess } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { DAEMON_DEFAULT_PORT, WEB_DEFAULT_PORT } from "@reef/shared";
+import { findLiveDaemon } from "../lib/pidfile.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "..", "..", "..", "..");
 
-export async function start(_args: string[]): Promise<void> {
+export async function start(args: string[]): Promise<void> {
+  const force = args.includes("--force");
+
+  // Don't double-fork — if a daemon is already running, just open the browser
+  // and exit cleanly. This is the most common cause of the EADDRINUSE pain.
+  const live = findLiveDaemon();
+  if (live && !force) {
+    const webUrl = `http://localhost:${WEB_DEFAULT_PORT}`;
+    const ageMin = Math.floor((Date.now() - live.startedAt) / 60_000);
+    console.log(
+      `reef daemon already running (pid ${live.pid}, port ${live.port}, up ${ageMin}m).\n` +
+        `opening ${webUrl} — use 'reef shutdown' to stop the daemon, or pass --force to override.`,
+    );
+    openBrowser(webUrl);
+    return;
+  }
+
   const procs: { name: string; color: string; child: ChildProcess }[] = [];
 
   procs.push(launch("daemon", "\x1b[36m", ["--filter", "@reef/daemon", "dev"]));
