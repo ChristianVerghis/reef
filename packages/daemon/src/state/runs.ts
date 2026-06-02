@@ -14,6 +14,9 @@ interface RunRow {
   git_before_sha: string | null;
   changes_json: string | null;
   task_id: string | null;
+  tokens_in: number | null;
+  tokens_out: number | null;
+  cost_usd: number | null;
 }
 
 function rowToRun(row: RunRow): AgentRun {
@@ -29,6 +32,9 @@ function rowToRun(row: RunRow): AgentRun {
     gitBeforeSha: row.git_before_sha ?? undefined,
     changes: row.changes_json ? (JSON.parse(row.changes_json) as GitChanges) : undefined,
     taskId: row.task_id ?? undefined,
+    tokensIn: row.tokens_in ?? undefined,
+    tokensOut: row.tokens_out ?? undefined,
+    costUsd: row.cost_usd ?? undefined,
   };
 }
 
@@ -86,6 +92,21 @@ export function updateRunChanges(id: string, changes: GitChanges | null): void {
   db()
     .prepare(`UPDATE runs SET changes_json = ? WHERE id = ?`)
     .run(changes ? JSON.stringify(changes) : null, id);
+}
+
+export interface UsageUpdate {
+  tokensIn: number;
+  tokensOut: number;
+  costUsd: number;
+  model: string;
+}
+
+export function updateRunUsage(id: string, usage: UsageUpdate): void {
+  db()
+    .prepare(
+      `UPDATE runs SET tokens_in = ?, tokens_out = ?, cost_usd = ?, model = ? WHERE id = ?`,
+    )
+    .run(usage.tokensIn, usage.tokensOut, usage.costUsd, usage.model, id);
 }
 
 /**

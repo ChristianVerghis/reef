@@ -98,12 +98,27 @@ function applySchema(d: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_run_primings_order ON run_primings(run_id, sort_order);
   `);
 
-  // Forward-compatible migration: add runs.task_id if upgrading from a DB that
-  // predates the tasks model.
+  // Forward-compatible migration: add columns to `runs` as the schema evolves.
+  // SQLite only supports ALTER TABLE ADD COLUMN, so we check pragma_table_info
+  // and add what's missing. Each new column lives in its own NULL-safe block.
   const runCols = d
     .prepare<[], { name: string }>(`SELECT name FROM pragma_table_info('runs')`)
     .all();
-  if (!runCols.some((c) => c.name === "task_id")) {
+  const hasCol = (name: string) => runCols.some((c) => c.name === name);
+  if (!hasCol("task_id")) {
     d.exec(`ALTER TABLE runs ADD COLUMN task_id TEXT`);
+  }
+  // M4 usage telemetry — populated from the Agent SDK's `result` message.
+  if (!hasCol("tokens_in")) {
+    d.exec(`ALTER TABLE runs ADD COLUMN tokens_in INTEGER`);
+  }
+  if (!hasCol("tokens_out")) {
+    d.exec(`ALTER TABLE runs ADD COLUMN tokens_out INTEGER`);
+  }
+  if (!hasCol("cost_usd")) {
+    d.exec(`ALTER TABLE runs ADD COLUMN cost_usd REAL`);
+  }
+  if (!hasCol("model")) {
+    d.exec(`ALTER TABLE runs ADD COLUMN model TEXT`);
   }
 }

@@ -1,9 +1,9 @@
-import { spawn, type ChildProcess } from "node:child_process";
 import { createWriteStream } from "node:fs";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { existsSync } from "node:fs";
 import type { AgentRun, CreateRunRequest, RunStatus } from "@reef/shared";
+import { ClaudeSDKRunner, type RunHandle, type UsageReport } from "@reef/agent-runtime";
 import { runLogPath } from "../lifecycle/paths.js";
 import { emit } from "./events.js";
 import { snapshot, changesSince, diffSince } from "./git.js";
@@ -14,6 +14,7 @@ import {
   updateRunStatus,
   updateRunGitBaseline,
   updateRunChanges,
+  updateRunUsage,
 } from "../state/runs.js";
 import { findTaskByCurrentRunId, updateTaskStatus } from "../state/tasks.js";
 import { extractLearningsFromRun, isExtractionEnabled } from "./extract-learnings.js";
@@ -30,9 +31,10 @@ export class BadRequestError extends Error {
   }
 }
 
-// Live subprocess tracking — intentionally not persisted; rebuilt fresh each daemon
+// Live handle tracking — intentionally not persisted; rebuilt fresh each daemon
 // boot. Reconciliation in state/runs.ts marks any orphaned rows failed on startup.
-const liveProcs = new Map<string, ChildProcess>();
+const liveHandles = new Map<string, RunHandle>();
+const runner = new ClaudeSDKRunner();
 
 export function listRuns(): AgentRun[] {
   return listAllRuns();
@@ -66,9 +68,9 @@ export async function createRun(req: CreateRunRequest): Promise<AgentRun> {
 }
 
 export function stopRun(id: string): boolean {
-  const proc = liveProcs.get(id);
-  if (!proc) return false;
-  proc.kill("SIGTERM");
+  const handle = liveHandles.get(id);
+  if (!handle) return false;
+  handle.stop();
   return true;
 }
 
@@ -85,9 +87,9 @@ async function spawnAgent(id: string): Promise<void> {
   const before = await snapshot(run.repoPath);
   updateRunGitBaseline(id, before.sha);
 
-  // Prime the agent with relevant substrate before it starts. Bedrock + loam +
-  // topsoil for this repo, ranked and capped. Recording the primings is what
-  // bumps references_count and ultimately drives auto-promotion.
+  // Prime with relevant substrate. Bedrock + loam + topsoil for this repo,
+  // ranked and capped. Recording the primings bumps references_count and
+  // ultimately drives auto-promotion.
   const primed = findLearningsForPriming(run.repoPath);
   if (primed.length > 0) recordPrimings(id, primed);
   const preamble = composePrimingPreamble(primed);
@@ -100,50 +102,82 @@ async function spawnAgent(id: string): Promise<void> {
     `# reef run ${id}\n# repo: ${run.repoPath}\n# prompt: ${run.prompt}\n# started: ${new Date(run.startedAt).toISOString()}\n# git baseline: ${before.sha ?? "(not a git repo)"}\n# primed: ${primed.length} learning(s) (${primed.map((l) => l.topic).join(", ") || "—"})\n\n`,
   );
 
-  const proc = spawn("claude", ["-p", finalPrompt], {
+  const handle = runner.start({
+    prompt: finalPrompt,
     cwd: run.repoPath,
-    env: process.env,
-    stdio: ["ignore", "pipe", "pipe"],
+    ...(run.model ? { model: run.model } : {}),
   });
-  liveProcs.set(id, proc);
+  liveHandles.set(id, handle);
 
-  proc.stdout?.setEncoding("utf8");
-  proc.stderr?.setEncoding("utf8");
+  let finalUsage: UsageReport | null = null;
 
-  proc.stdout?.on("data", (chunk: string) => {
-    logStream.write(chunk);
-    emit({ type: "stdout", runId: id, chunk, ts: Date.now() });
-  });
-
-  proc.stderr?.on("data", (chunk: string) => {
-    logStream.write(`[stderr] ${chunk}`);
-    emit({ type: "stderr", runId: id, chunk, ts: Date.now() });
-  });
-
-  proc.on("error", (err) => {
-    logStream.write(`\n[error] ${err.message}\n`);
-    liveProcs.delete(id);
-    fail(id, err);
-    logStream.end();
-  });
-
-  proc.on("close", async (code) => {
-    liveProcs.delete(id);
-    logStream.write(`\n# exit: ${code}\n`);
+  // Drain events in the background. The Agent SDK's structured events get
+  // translated into our event bus shape (stdout/stderr) for SSE consumers.
+  // Tool-use events are noted in the log for now; future M5 work surfaces
+  // them in the UI.
+  (async () => {
     try {
-      const ch = await changesSince(run.repoPath, before.sha);
-      updateRunChanges(id, ch);
-      if (ch) {
-        logStream.write(
-          `# changes: ${ch.filesChanged} files (+${ch.insertions}/-${ch.deletions})\n`,
-        );
+      for await (const event of handle.events) {
+        switch (event.type) {
+          case "stdout":
+            logStream.write(event.chunk);
+            emit({ type: "stdout", runId: id, chunk: event.chunk, ts: event.ts });
+            break;
+          case "stderr":
+            logStream.write(`[stderr] ${event.chunk}`);
+            emit({ type: "stderr", runId: id, chunk: event.chunk, ts: event.ts });
+            break;
+          case "tool-use":
+            logStream.write(`\n[tool-use] ${event.tool}\n`);
+            break;
+          case "tool-result":
+            if (event.isError) logStream.write(`[tool-error]\n`);
+            break;
+          case "usage":
+            finalUsage = event.report;
+            break;
+        }
       }
     } catch (err) {
-      logStream.write(`\n[git-diff failed] ${err instanceof Error ? err.message : err}\n`);
+      logStream.write(
+        `\n[stream-error] ${err instanceof Error ? err.message : String(err)}\n`,
+      );
     }
-    logStream.end();
-    finalize(id, code ?? 0);
-  });
+  })();
+
+  const exitCode = await handle.done;
+  liveHandles.delete(id);
+
+  // Persist usage telemetry (if the SDK reported it) before flipping status —
+  // that way the final `status: done` event landing on SSE comes after the
+  // row already reflects the cost numbers.
+  const usage = handle.getUsage() ?? finalUsage;
+  if (usage) {
+    updateRunUsage(id, {
+      tokensIn: usage.inputTokens,
+      tokensOut: usage.outputTokens,
+      costUsd: usage.costUsd,
+      model: usage.model,
+    });
+    logStream.write(
+      `\n# usage: ${usage.inputTokens} in / ${usage.outputTokens} out · $${usage.costUsd.toFixed(4)} · ${usage.model}\n`,
+    );
+  }
+  logStream.write(`# exit: ${exitCode}\n`);
+
+  try {
+    const ch = await changesSince(run.repoPath, before.sha);
+    updateRunChanges(id, ch);
+    if (ch) {
+      logStream.write(
+        `# changes: ${ch.filesChanged} files (+${ch.insertions}/-${ch.deletions})\n`,
+      );
+    }
+  } catch (err) {
+    logStream.write(`\n[git-diff failed] ${err instanceof Error ? err.message : err}\n`);
+  }
+  logStream.end();
+  finalize(id, exitCode);
 }
 
 function setStatus(id: string, status: RunStatus, exitCode?: number) {

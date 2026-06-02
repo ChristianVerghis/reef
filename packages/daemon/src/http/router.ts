@@ -1,7 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createRun, listRuns, getRun, stopRun, getRunDiff, BadRequestError } from "../agents/registry.js";
 import { subscribe } from "../agents/events.js";
-import { CreateRunRequest, CreateTaskRequest, CreateLearningRequest, Layer } from "@reef/shared";
+import { CreateRunRequest, CreateTaskRequest, CreateLearningRequest, Layer, UsageWindow } from "@reef/shared";
+import { summarizeUsage } from "../state/usage.js";
 import { randomUUID } from "node:crypto";
 import {
   deleteTask,
@@ -108,6 +109,16 @@ export async function handleRequest(req: IncomingMessage, res: ServerResponse) {
     const repo = url.searchParams.get("repo");
     if (!repo) return json(res, 400, { error: "repo query param required" });
     return json(res, 200, { learnings: findLearningsForPriming(repo) });
+  }
+
+  // GET /api/usage/summary?window=day|week|month|all
+  if (method === "GET" && url.pathname === "/api/usage/summary") {
+    const windowParam = url.searchParams.get("window") ?? "week";
+    const parsed = UsageWindow.safeParse(windowParam);
+    if (!parsed.success) {
+      return json(res, 400, { error: "window must be day|week|month|all" });
+    }
+    return json(res, 200, summarizeUsage(parsed.data));
   }
 
   // GET /api/tasks

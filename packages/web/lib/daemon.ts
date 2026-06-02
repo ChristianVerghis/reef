@@ -10,6 +10,8 @@ import type {
   RunDiffResponse,
   StartTaskResponse,
   Task,
+  UsageSummary,
+  UsageWindow,
 } from "@reef/shared";
 
 export function daemonUrl(): string {
@@ -113,5 +115,13 @@ export async function previewBrief(repoPath: string): Promise<{ learnings: Learn
   url.searchParams.set("repo", repoPath);
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(`previewBrief failed: ${res.status}`);
+  return res.json();
+}
+
+export async function usageSummary(window: UsageWindow = "week"): Promise<UsageSummary> {
+  const url = new URL(`${daemonUrl()}/api/usage/summary`);
+  url.searchParams.set("window", window);
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`usageSummary failed: ${res.status}`);
   return res.json();
 }

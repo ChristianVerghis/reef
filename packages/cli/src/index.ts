@@ -7,6 +7,7 @@ import { show } from "./commands/show.js";
 import { petrify, fossilize } from "./commands/petrify.js";
 import { brief } from "./commands/brief.js";
 import { shutdown } from "./commands/shutdown.js";
+import { usage } from "./commands/usage.js";
 
 const [, , cmd = "start", ...args] = process.argv;
 
@@ -21,6 +22,7 @@ const commands: Record<string, (args: string[]) => Promise<void> | void> = {
   petrify,
   fossilize,
   brief,
+  usage,
   help: () => printHelp(),
   "--help": () => printHelp(),
   "-h": () => printHelp(),
@@ -53,6 +55,10 @@ strata:
   reef show <id>          show one learning in full
   reef petrify <id>       promote a learning to bedrock (load-bearing truth)
   reef fossilize <id>     mark a learning as outdated (preserved as history)
+
+usage:
+  reef usage              token / cost summary for the last 7 days
+                          flags: --window day|week|month|all
 
 misc:
   reef help               show this message

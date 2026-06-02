@@ -25,7 +25,6 @@ export const AgentRun = z.object({
   id: z.string(),
   repoPath: z.string(),
   prompt: z.string(),
-  model: z.string().optional(),
   status: RunStatus,
   startedAt: z.number(),
   endedAt: z.number().optional(),
@@ -43,6 +42,14 @@ export const AgentRun = z.object({
     .nullable()
     .optional(),
   taskId: z.string().nullable().optional(),
+  // M4 usage telemetry from the Agent SDK's terminal `result` message.
+  // Populated only for runs that completed under the SDK runner; older runs
+  // show these as undefined. `model` is the dominant model (most tokens)
+  // when a run touches multiple — most runs touch just one.
+  tokensIn: z.number().nullable().optional(),
+  tokensOut: z.number().nullable().optional(),
+  costUsd: z.number().nullable().optional(),
+  model: z.string().nullable().optional(),
 });
 export type AgentRun = z.infer<typeof AgentRun>;
 
@@ -99,6 +106,27 @@ export const ListRunsResponse = z.object({
   runs: z.array(AgentRun),
 });
 export type ListRunsResponse = z.infer<typeof ListRunsResponse>;
+
+export const UsageWindow = z.enum(["day", "week", "month", "all"]);
+export type UsageWindow = z.infer<typeof UsageWindow>;
+
+export const UsageSummary = z.object({
+  window: UsageWindow,
+  runCount: z.number().int(),
+  tokensIn: z.number().int(),
+  tokensOut: z.number().int(),
+  costUsd: z.number(),
+  byModel: z.array(
+    z.object({
+      model: z.string(),
+      runs: z.number().int(),
+      tokensIn: z.number().int(),
+      tokensOut: z.number().int(),
+      costUsd: z.number(),
+    }),
+  ),
+});
+export type UsageSummary = z.infer<typeof UsageSummary>;
 
 export const Layer = z.enum(["topsoil", "loam", "bedrock", "fossil"]);
 export type Layer = z.infer<typeof Layer>;

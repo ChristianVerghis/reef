@@ -114,12 +114,27 @@ export function AgentStream({ initialRun }: { initialRun: AgentRun }) {
           <span>·</span>
           <span>{initialRun.id}</span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <span className={`h-2.5 w-2.5 rounded-full ${c.dot}`} />
           <span className={`text-sm font-medium ${c.text}`}>{c.label}</span>
           {run.exitCode !== undefined && (
             <span className="text-xs font-mono text-zinc-500">
               exit {run.exitCode}
+            </span>
+          )}
+          {run.model && (
+            <span className="text-xs font-mono text-zinc-500" title="model">
+              {shortModel(run.model)}
+            </span>
+          )}
+          {(run.tokensIn !== undefined || run.tokensOut !== undefined) && (
+            <span className="text-xs font-mono text-zinc-500" title="tokens in / out">
+              {formatTokens(run.tokensIn ?? 0)}↓ {formatTokens(run.tokensOut ?? 0)}↑
+            </span>
+          )}
+          {run.costUsd !== undefined && run.costUsd !== null && (
+            <span className="text-xs font-mono text-zinc-700 dark:text-zinc-300" title="estimated cost">
+              ${run.costUsd.toFixed(4)}
             </span>
           )}
           {isLive && (
@@ -300,4 +315,18 @@ function LayerDot({ layer }: { layer: Learning["layer"] }) {
           ? "bg-emerald-500"
           : "bg-zinc-500";
   return <span className={`h-2 w-2 rounded-full ${dot}`} />;
+}
+
+function shortModel(model: string): string {
+  // claude-sonnet-4-5-20250929 → sonnet-4-5
+  const m = model.match(/(?:claude-)?([a-z]+)-?(\d+)?-?(\d+)?/);
+  if (!m) return model;
+  return [m[1], m[2], m[3]].filter(Boolean).join("-");
+}
+
+function formatTokens(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 10_000) return `${Math.round(n / 1000)}k`;
+  if (n >= 1_000) return `${(n / 1000).toFixed(1)}k`;
+  return String(n);
 }

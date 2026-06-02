@@ -1,14 +1,21 @@
 import Link from "next/link";
-import { listRuns } from "@/lib/daemon";
+import { listRuns, usageSummary } from "@/lib/daemon";
 import { STATUS_COLORS } from "@/lib/status";
+import type { UsageSummary } from "@reef/shared";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
   let runs: Awaited<ReturnType<typeof listRuns>>["runs"] = [];
+  let day: UsageSummary | null = null;
+  let week: UsageSummary | null = null;
   let daemonError: string | null = null;
   try {
-    runs = (await listRuns()).runs;
+    [runs, day, week] = await Promise.all([
+      listRuns().then((r) => r.runs),
+      usageSummary("day"),
+      usageSummary("week"),
+    ]);
   } catch (err) {
     daemonError = err instanceof Error ? err.message : String(err);
   }
@@ -29,6 +36,26 @@ export default async function Home() {
             .
           </p>
         </div>
+        {(day || week) && (
+          <div className="flex flex-col gap-1 text-right text-xs font-mono text-zinc-500 shrink-0">
+            {day && (
+              <div>
+                <span className="text-zinc-400">today</span>{" "}
+                <span className="text-zinc-700 dark:text-zinc-300">
+                  {day.runCount} run{day.runCount === 1 ? "" : "s"} · ${day.costUsd.toFixed(2)}
+                </span>
+              </div>
+            )}
+            {week && (
+              <div>
+                <span className="text-zinc-400">7d</span>{" "}
+                <span className="text-zinc-700 dark:text-zinc-300">
+                  {week.runCount} run{week.runCount === 1 ? "" : "s"} · ${week.costUsd.toFixed(2)}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
       </header>
 
       {daemonError && (
