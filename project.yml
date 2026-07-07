@@ -1,0 +1,19 @@
+# project.yml — dashboard manifest (auto-read by ~/dev/dashboard)
+name: reef
+kind: service
+status: dormant   # last commit 2026-06-02; flip back to active when M5 work resumes
+description: Local-first AI cockpit for orchestrating coding agents across many git repos, with stratified per-repo learnings that prime future runs.
+repo: https://github.com/ChristianVerghis/reef
+port: 3737
+start: pnpm dev
+health: http://127.0.0.1:3738/api/health
+links:
+  - { label: "Open reef →", href: "http://localhost:3737", primary: true }
+  - { label: "Learnings strata →", href: "http://localhost:3737/reef" }
+  - { label: "Task queue →", href: "http://localhost:3737/tasks" }
+  - { label: "Daemon health", href: "http://127.0.0.1:3738/api/health" }
+actions:
+  typecheck: pnpm typecheck
+  lint: pnpm lint
+  usage: node packages/cli/bin.js usage --window week
+tags: [agents, local-ai, daemon, substrate]
