@@ -17,3 +17,6 @@ actions:
   lint: pnpm lint
   usage: node packages/cli/bin.js usage --window week
 tags: [agents, local-ai, daemon, substrate]
+showcase:
+  kind: app
+  href: http://localhost:3737
