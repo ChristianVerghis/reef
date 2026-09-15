@@ -4,6 +4,16 @@ dist
 .turbo
 *.tsbuildinfo
 .env
-.env.local
+.env.*
+!.env.example
 .DS_Store
+
+# Reef runtime data (normally lives in ~/.reef, but never commit it if REEF_HOME points here)
 .reef/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.pid
+*.log

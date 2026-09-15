@@ -1,4 +1,4 @@
-# project.yml — dashboard manifest (auto-read by ~/dev/dashboard)
+# project.yml — manifest for a separate local project dashboard; not required to run Reef
 name: reef
 kind: service
 status: dormant   # last commit 2026-06-02; flip back to active when M5 work resumes

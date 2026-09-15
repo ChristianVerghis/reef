@@ -2,13 +2,13 @@
 
 ## This is NOT the Next.js you know
 
-`packages/web` runs Next.js 16.2.6. Breaking changes from prior versions affect APIs, conventions, and file structure. **Before writing any code that touches `packages/web`**, read the relevant guide in `node_modules/next/dist/docs/`. Heed deprecation notices.
+`packages/web` runs Next.js 16.2.x. Breaking changes from prior versions affect APIs, conventions, and file structure. **Before writing any code that touches `packages/web`**, read the relevant guide in `node_modules/next/dist/docs/`. Heed deprecation notices.
 
 ## Architecture
 
 - **Daemon is the source of truth.** All state lives in SQLite (`~/.reef/state.db`). Never have the web app or CLI touch the DB or spawn subprocesses directly — go through the daemon's HTTP API.
 - **Three processes, one binary.** `reef start` (CLI) forks the daemon and the web dev/prod server. Daemon owns state + agent subprocesses; web is a thin view.
-- **macOS + Linux only** in v1 (unix-socket IPC for CLI ↔ daemon).
+- **macOS + Linux only** in v1. CLI, web and daemon talk over loopback HTTP on `127.0.0.1`.
 
 ## Status colors (semantic)
 
@@ -23,8 +23,8 @@
 
 - Tailwind 4 via `@tailwindcss/postcss`. Theme tokens in `app/globals.css` under `@theme inline`.
 - Geist Sans + Geist Mono via `next/font/google`.
-- shadcn/ui with `zinc` base color (added in M2).
-- Recharts 3.8.1 for metrics (M4).
+- No component library yet; plain Tailwind with `zinc` as the neutral scale.
+- No charting library yet; usage totals are rendered as text.
 - No state management library; React state + SWR-style fetching from daemon API.
 
 ## What lives where
