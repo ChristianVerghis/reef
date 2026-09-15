@@ -85,10 +85,10 @@ export function digByTopic(query: string, repoPath?: string): Learning[] {
   const like = `%${query}%`;
   const rows = repoPath
     ? db()
-        .prepare<[string, string, string, string], LearningRow>(
+        .prepare<[string, string, string], LearningRow>(
           `SELECT * FROM learnings
            WHERE repo_path = ? AND (topic LIKE ? OR content LIKE ?)
-             AND layer != 'fossil' OR ? = 'all'
+             AND layer != 'fossil'
            ORDER BY
              CASE layer
                WHEN 'bedrock' THEN 0
@@ -99,7 +99,7 @@ export function digByTopic(query: string, repoPath?: string): Learning[] {
              confidence DESC,
              created_at DESC`,
         )
-        .all(repoPath, like, like, "")
+        .all(repoPath, like, like)
     : db()
         .prepare<[string, string], LearningRow>(
           `SELECT * FROM learnings
