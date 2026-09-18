@@ -22,6 +22,13 @@ export function db(): Database.Database {
   return _db;
 }
 
+/** Close the connection and forget it, so the next initDb() opens fresh. Used by tests and shutdown. */
+export function closeDb(): void {
+  if (!_db) return;
+  _db.close();
+  _db = null;
+}
+
 function applySchema(d: Database.Database) {
   d.exec(`
     CREATE TABLE IF NOT EXISTS runs (

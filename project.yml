@@ -1,7 +1,7 @@
 # project.yml — manifest for a separate local project dashboard; not required to run Reef
 name: reef
 kind: service
-status: dormant   # last commit 2026-06-02; flip back to active when M5 work resumes
+status: active   # resumed 2026-09-18: tests + learnings hygiene first, then demo + priming experiment
 description: Local-first AI cockpit for orchestrating coding agents across many git repos, with stratified per-repo learnings that prime future runs.
 repo: https://github.com/ChristianVerghis/reef
 port: 3737

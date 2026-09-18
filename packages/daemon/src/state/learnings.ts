@@ -77,8 +77,8 @@ export function listAllLearnings(): Learning[] {
 }
 
 /**
- * Topic-based retrieval — the v1 "dig" operation. Matches against the topic
- * column first; falls back to content LIKE search if no topic matches. Future:
+ * Topic-based retrieval — the v1 "dig" operation. Matches topic or content
+ * with LIKE. Read-only: retrieval does not count as a reference. Future:
  * embedding-based semantic retrieval.
  */
 export function digByTopic(query: string, repoPath?: string): Learning[] {
@@ -116,17 +116,9 @@ export function digByTopic(query: string, repoPath?: string): Learning[] {
         )
         .all(like, like);
 
-  // Side effect: bump references_count + last_referenced_at on retrieved rows.
-  // This is what drives the topsoil → loam promotion path.
-  const now = Date.now();
-  for (const row of rows) {
-    db()
-      .prepare(
-        `UPDATE learnings SET references_count = references_count + 1, last_referenced_at = ? WHERE id = ?`,
-      )
-      .run(now, row.id);
-  }
-
+  // No side effects: looking a learning up is not the same as using it. Only
+  // recordPrimings() bumps references_count, so promotion is driven by runs
+  // that were actually primed with the learning, never by `reef dig`.
   return rows.map(rowToLearning);
 }
 

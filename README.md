@@ -27,7 +27,7 @@ What the daemon records per run:
 
 When a run starts, the daemon selects learnings for that repo (bedrock first, then loam, then topsoil; ranked by confidence and recency; capped at 20 items / 8 KB) and prepends them to the prompt. Each priming is recorded in a `run_primings` table and bumps the learning's reference count, which is what drives topsoil-to-loam promotion. `reef brief` previews exactly what a run on a given repo would be primed with.
 
-Learnings can be added by hand via `POST /api/learnings`, or mined automatically from successful runs by a second `claude -p` call. Auto-extraction is **off by default** because it costs an extra model call per run; enable it with `REEF_EXTRACT_LEARNINGS=true` in the daemon's environment.
+`reef dig` is read-only: looking a learning up does not count as a reference, only being primed into a run does. Learnings can be added by hand via `POST /api/learnings`, or mined automatically from successful runs by a second `claude -p` call. Auto-extraction is **off by default** because it costs an extra model call per run; enable it with `REEF_EXTRACT_LEARNINGS=true` in the daemon's environment.
 
 **Tasks.** A queue of `{title, body, repoPath, priority 1-3, pinned}` items. `reef next` (or the UI) starts the highest-priority queued task as a run; the task's status mirrors the run's outcome.
 
@@ -39,7 +39,7 @@ I was running Claude Code across a dozen personal repos and kept losing two thin
 
 ## Status
 
-As of 2026-09-15. Version 0.0.0; last substantive commit 2026-07-06 (dependency upgrades). Active development paused after milestone M4 in June 2026.
+As of 2026-09-18. Version 0.0.0. Development resumed 2026-09-18 after a pause at milestone M4 (June 2026).
 
 Works:
 
@@ -48,11 +48,11 @@ Works:
 - Task queue with priority and pinning; `reef next` and the `/tasks` page.
 - Learnings CRUD, topic search (`reef dig`), manual promotion (`petrify`/`fossilize`), automatic topsoil-to-loam promotion, and prompt priming with recorded provenance.
 - Token/cost telemetry per run and aggregated usage windows.
-- `pnpm typecheck` and `pnpm lint` pass.
+- `pnpm typecheck` and `pnpm lint` pass; `pnpm test` runs the daemon's Vitest suite (13 tests on the learnings module: promotion rules, priming selection and caps, provenance, dig, preamble).
 
 Rough or missing:
 
-- No automated tests.
+- Tests cover only the learnings module so far; runs, tasks, the HTTP API and the web UI are untested.
 - Tool-use events from the SDK are written to the run log but not yet shown in the UI.
 - Topic search is SQL `LIKE` on topic and content; no semantic retrieval.
 - `paused` and `handed-off` run statuses are defined in the schema but no code path produces them.
@@ -109,6 +109,7 @@ Other scripts:
 ```bash
 pnpm typecheck
 pnpm lint
+pnpm test                # daemon unit tests (Vitest)
 pnpm build               # next build for the web package
 ```
 

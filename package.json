@@ -11,12 +11,14 @@
     "build": "pnpm -r --filter=./packages/* build",
     "typecheck": "pnpm -r --filter=./packages/* typecheck",
     "lint": "pnpm -r --filter=./packages/* lint",
-    "reef": "node packages/cli/bin.js"
+    "reef": "node packages/cli/bin.js",
+    "test": "pnpm -r --filter=./packages/* --if-present test"
   },
   "devDependencies": {
     "@types/node": "^20",
     "tsx": "^4.23.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^5.0.1"
   },
   "packageManager": "pnpm@8.6.9",
   "engines": {
